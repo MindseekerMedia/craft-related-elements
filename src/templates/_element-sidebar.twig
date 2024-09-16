@@ -1,0 +1,33 @@
+<fieldset class="related-elements-sidebar">
+  <legend class="h6">Related elements</legend>
+  <div class="meta">
+    {% if hasResults %}
+      {% for key, section in relatedElements %}
+        {% for element in section %}
+          <div class="field" style="padding-block: 10px;">
+            <a href="{{ element.cpEditUrl }}" class="flex flex-nowrap gap-s">
+              <span class="status small {{ element.status }}" role="img" aria-label="Status: {{ element.status }}" style="margin-inline-end: 0;"></span>
+              <span class="cp-icon small">
+                {% switch key %}
+                  {% case 'Entry' %}
+                    {{ iconSvg('newspaper') }}
+                  {% case 'Category' %}
+                    {{ iconSvg('sitemap') }}
+                  {% case 'Asset' %}
+                    {{ iconSvg('asset') }}
+                {% endswitch %}
+              </span>
+              <span style="word-break: break-word;">
+                {{ element.title ?? element.id }}
+              </span>
+            </a>
+          </div>
+        {% endfor %}
+      {% endfor %}
+    {% else %}
+      <div class="field" style="padding-block: 10px;">
+        <p>No related elements found.</p>
+      </div>
+    {% endif %}
+  </div>
+</fieldset>

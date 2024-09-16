@@ -1,0 +1,44 @@
+{
+  "name": "mindseeker-media/craft-related-elements",
+  "description": "Displays related elements of an entry, category or asset in the control panel edit view sidebar.",
+  "type": "craft-plugin",
+  "license": "mit",
+  "support": {
+    "email": "info@mindseeker.media"
+  },
+  "require": {
+    "php": ">=8.2",
+    "craftcms/cms": "^5.4.0"
+  },
+  "require-dev": {
+    "craftcms/ecs": "dev-main",
+    "craftcms/phpstan": "dev-main"
+  },
+  "autoload": {
+    "psr-4": {
+      "mindseekermedia\\craftrelatedelements\\": "src/"
+    }
+  },
+  "extra": {
+    "handle": "related-elements",
+    "name": "Related Elements",
+    "developer": "Mindseeker Media",
+    "documentationUrl": "",
+    "class": "mindseekermedia\\craftrelatedelements\\RelatedElements"
+  },
+  "scripts": {
+    "check-cs": "ecs check --ansi",
+    "fix-cs": "ecs check --ansi --fix",
+    "phpstan": "phpstan --memory-limit=1G"
+  },
+  "config": {
+    "sort-packages": true,
+    "platform": {
+      "php": "8.2"
+    },
+    "allow-plugins": {
+      "yiisoft/yii2-composer": true,
+      "craftcms/plugin-installer": true
+    }
+  }
+}
