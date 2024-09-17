@@ -4,7 +4,7 @@
   "type": "craft-plugin",
   "license": "mit",
   "support": {
-    "email": "info@mindseeker.media"
+    "email": "dev@mindseeker.media"
   },
   "require": {
     "php": ">=8.2",

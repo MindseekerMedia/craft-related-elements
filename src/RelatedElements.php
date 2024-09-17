@@ -15,7 +15,7 @@ use yii\base\Event;
  * Related Elements plugin
  *
  * @method static RelatedElements getInstance()
- * @author Mindseeker Media <info@mindseeker.media>
+ * @author Mindseeker Media <dev@mindseeker.media>
  * @copyright Mindseeker Media
  * @license MIT
  */
