@@ -1,0 +1,12 @@
+{% import '_includes/forms.twig' as forms %}
+<div>
+  {{ forms.lightswitchField({
+    label: 'Display nested related elements',
+    instructions: 'Wether to display the related elements that exist inside the Matrix or Neo fields of an entry, category or asset.',
+    name: 'enableNestedElements',
+    value: settings.enableNestedElements,
+    on: (settings.enableNestedElements is defined) ? settings.enableNestedElements : '',
+    class: 'first',
+  }) }}
+</div>
+
