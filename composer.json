@@ -4,7 +4,11 @@
   "type": "craft-plugin",
   "license": "mit",
   "support": {
-    "email": "dev@mindseeker.media"
+    "email": "dev@mindseeker.media",
+    "issues": "https://github.com/MindseekerMedia/craft-related-elements/issues?state=open",
+    "source": "https://github.com/MindseekerMedia/craft-related-elements",
+    "docs": "https://github.com/MindseekerMedia/craft-related-elements",
+    "rss": "https://github.com/MindseekerMedia/craft-related-elements/releases.atom"
   },
   "require": {
     "php": ">=8.2",
@@ -23,7 +27,7 @@
     "handle": "related-elements",
     "name": "Related Elements",
     "developer": "Mindseeker Media",
-    "documentationUrl": "",
+    "documentationUrl": "https://github.com/MindseekerMedia/craft-related-elements",
     "class": "mindseekermedia\\craftrelatedelements\\RelatedElements"
   },
   "scripts": {

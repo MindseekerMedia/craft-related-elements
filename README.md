@@ -30,3 +30,15 @@ composer require mindseeker-media/craft-related-elements
 # tell Craft to install the plugin
 ./craft plugin/install related-elements
 ```
+
+## Configuration
+
+Configure options in the control panel under Settings → Related Elements or create a configuration file config/related-elements.php.
+
+```php
+<?php
+
+return [
+    'enableNestedElements' => true,
+];
+```
