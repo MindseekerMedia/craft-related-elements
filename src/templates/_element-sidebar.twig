@@ -24,6 +24,39 @@
           </div>
         {% endfor %}
       {% endfor %}
+      {% for fieldKey, field in nestedRelatedElements %}
+        <div class="field" style="padding-block: 10px;">
+          <em>
+            {{ fieldKey }}
+          </em>
+        </div>
+        {% for key, section in field %}
+          {% for element in section %}
+            <div class="field" style="min-height: 34px; padding-top: 0; padding-bottom: 10px; border-top: none;">
+              <div class="flex flex-nowrap gap-s">
+                <span style="position: relative; top: -3px;">∟</span>
+                <a href="{{ element.cpEditUrl }}" class="flex flex-nowrap gap-s">
+                  <span class="status small {{ element.status }}" role="img" aria-label="Status: {{ element.status }}" style="margin-inline-end: 0;"></span>
+                  <span class="cp-icon small">
+                  {% switch key %}
+                  {% case 'Entry' %}
+                    {{ iconSvg('newspaper') }}
+                  {% case 'Category' %}
+                    {{ iconSvg('sitemap') }}
+                  {% case 'Asset' %}
+                    {{ iconSvg('asset') }}
+                  {% endswitch %}
+                </span>
+                  <span style="word-break: break-word;">
+                  {{ element.title ?? element.id }}
+                </span>
+                </a>
+              </div>
+
+            </div>
+          {% endfor %}
+        {% endfor %}
+      {% endfor %}
     {% else %}
       <div class="field" style="padding-block: 10px;">
         <p>No related elements found.</p>

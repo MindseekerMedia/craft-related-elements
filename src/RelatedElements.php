@@ -9,6 +9,7 @@ use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
 use craft\events\DefineHtmlEvent;
+use craft\fields\Matrix;
 use yii\base\Event;
 
 /**
@@ -35,7 +36,7 @@ class RelatedElements extends Plugin
         Event::on(
             Element::class,
             Element::EVENT_DEFINE_SIDEBAR_HTML,
-            static fn (DefineHtmlEvent $event) => $event->html .=
+            static fn(DefineHtmlEvent $event) => $event->html .=
                 ($event->sender instanceof Entry ||
                     $event->sender instanceof Category ||
                     $event->sender instanceof Asset)
@@ -53,7 +54,9 @@ class RelatedElements extends Plugin
         ];
 
         $relatedElements = [];
+        $nestedRelatedElements = [];
         $hasResults = false;
+        $customFields = $entry->getFieldLayout()->getCustomFields();
 
         foreach ($relatedTypes as $type => $class) {
             $relatedElements[$type] = $class::find()->relatedTo($entry)->status(null)->orderBy('title')->all();
@@ -62,11 +65,35 @@ class RelatedElements extends Plugin
             }
         }
 
+        foreach ($customFields as $field) {
+            $isMatrixField = $field instanceof Matrix;
+            $isNeoField = class_exists('\benf\neo\Field') && get_class($field) === \benf\neo\Field::class;
+
+            if ($isMatrixField || $isNeoField) {
+                $blocks = $entry->getFieldValue($field->handle);
+
+                foreach ($blocks->all() as $block) {
+                    foreach ($relatedTypes as $type => $class) {
+                        $nestedRelatedElements[$field->name][$type] = $class::find()
+                            ->relatedTo($block)
+                            ->status(null)
+                            ->orderBy('title')
+                            ->all();
+
+                        if (!empty($nestedRelatedElements[$field->name][$type])) {
+                            $hasResults = true;
+                        }
+                    }
+                }
+            }
+        }
+
         return Craft::$app->getView()->renderTemplate(
             'related-elements/_element-sidebar',
             [
                 'hasResults' => $hasResults,
                 'relatedElements' => $relatedElements,
+                'nestedRelatedElements' => $nestedRelatedElements,
             ]
         );
     }
