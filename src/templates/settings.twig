@@ -83,13 +83,15 @@
   const checkboxes = Array.from(group.querySelectorAll('input[type="checkbox"]'));
   const all = checkboxes.find((checkbox) => checkbox.value === '*');
   if (!all) return;
-  checkboxes.forEach((checkbox) => checkbox.addEventListener('change', () => {
-    if (checkbox === all && all.checked) {
-      checkboxes.filter((item) => item !== all).forEach((item) => item.checked = false);
-    } else if (checkbox !== all && checkbox.checked) {
-      all.checked = false;
-    }
-    if (!checkboxes.some((item) => item.checked)) all.checked = true;
-  }));
+  const specific = checkboxes.filter((checkbox) => checkbox !== all);
+  specific.forEach((checkbox) => checkbox.dataset.initiallyDisabled = checkbox.disabled ? 'true' : 'false');
+  const updateSpecificOptions = () => specific.forEach((checkbox) => {
+    checkbox.disabled = all.checked || checkbox.dataset.initiallyDisabled === 'true';
+  });
+  all.addEventListener('change', () => {
+    if (all.checked) specific.forEach((checkbox) => checkbox.checked = false);
+    updateSpecificOptions();
+  });
+  updateSpecificOptions();
 });
 {% endjs %}
