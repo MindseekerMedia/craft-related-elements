@@ -1,0 +1,12 @@
+{% set labels = {entries: 'Entry', categories: 'Category', assets: 'Asset', tags: 'Tag'} %}
+{% set icons = {entries: 'newspaper', categories: 'sitemap', assets: 'asset', tags: 'tags'} %}
+{% set entryType = type == 'entries' ? element.type : null %}
+{% set color = entryType and entryType.color ? entryType.color.cssVar(500) : null %}
+<div class="field related-element-item" data-type="{{ type }}" data-loaded="{{ loaded ? 'true' : 'false' }}">
+  {% if type == 'tags' %}<a href="#" class="related-element-link tag-link" data-tag-id="{{ element.id }}">{% else %}<a href="{{ element.cpEditUrl ?? '#' }}" class="related-element-link">{% endif %}
+    {% if element.status %}<span class="status small {{ element.status }}" role="img" aria-label="Status: {{ element.status }}"></span>{% endif %}
+    <span class="cp-icon small"{% if color %} style="color:{{ color }};--icon-color:{{ color }}"{% endif %}>{{ iconSvg(entryType and entryType.icon ? entryType.icon : icons[type]) }}</span>
+    <span class="related-element-title">{{ element.title ?? element.id }}</span>
+    {% if showElementTypeLabel %}<span class="element-type-pill">{{ labels[type] }}</span>{% endif %}
+  </a>
+</div>

@@ -1,0 +1,3 @@
+{% for item in items %}
+  {% include 'related-elements/_element-item' with {element: item.element, type: item.type, showElementTypeLabel: showElementTypeLabel, loaded: loaded} only %}
+{% endfor %}

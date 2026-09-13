@@ -1,457 +1,102 @@
-<style>
-.related-elements-sidebar .cp-icon[style*="--icon-color"] svg {
-  fill: var(--icon-color) !important;
-  stroke: var(--icon-color) !important;
-  color: var(--icon-color) !important;
-}
-.related-elements-sidebar .cp-icon[style*="--icon-color"] svg * {
-  fill: var(--icon-color) !important;
-  stroke: var(--icon-color) !important;
-}
-</style>
-
-{# Macro for element type pill #}
-{% macro elementTypePill(elementType) %}
-  <span class="element-type-pill" style="
-    display: inline-block;
-    padding: 0px 5px;
-    border-radius: 8px;
-    font-size: 8px;
-    line-height: 14px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.2px;
-    margin-left: 4px;
-    {% switch elementType %}
-      {% case 'Entry' %}
-        background-color: #e3f2fd;
-        color: #1565c0;
-        border: 1px solid #bbdefb;
-      {% case 'Category' %}
-        background-color: #f3e5f5;
-        color: #7b1fa2;
-        border: 1px solid #e1bee7;
-      {% case 'Asset' %}
-        background-color: #e8f5e8;
-        color: #2e7d32;
-        border: 1px solid #c8e6c9;
-      {% case 'Tag' %}
-        background-color: #fff3e0;
-        color: #ef6c00;
-        border: 1px solid #ffcc02;
-      {% default %}
-        background-color: #f5f5f5;
-        color: #666;
-        border: 1px solid #ddd;
-    {% endswitch %}
-  ">{{ elementType }}</span>
-{% endmacro %}
-
-<fieldset class="related-elements-sidebar">
+<fieldset class="related-elements-sidebar" data-element-id="{{ element.id }}" data-site-id="{{ element.siteId }}">
   <legend class="h6">Related elements</legend>
   <div class="meta">
-    {% if hasResults %}
-      {% set totalElements = 0 %}
-
-      {# Count outgoing elements #}
-      {% for key, section in outgoingRelatedElements %}
-        {% if section|length %}
-          {% set totalElements = totalElements + section|length %}
-        {% endif %}
-      {% endfor %}
-
-      {# Count incoming elements #}
-      {% for key, section in incomingRelatedElements %}
-        {% if section|length %}
-          {% set totalElements = totalElements + section|length %}
-        {% endif %}
-      {% endfor %}
-
-      {# Count nested elements #}
-      {% for fieldKey, field in nestedRelatedElements %}
-        {% for key, section in field %}
-          {% if section|length %}
-            {% set totalElements = totalElements + section|length %}
-          {% endif %}
-        {% endfor %}
-      {% endfor %}
-
-      {% set elementIndex = 0 %}
-
-      {# Display outgoing relationships (elements this entry references) #}
-      {% set hasOutgoingElements = false %}
-      {% for key, section in outgoingRelatedElements %}
-        {% if section|length %}
-          {% set hasOutgoingElements = true %}
-        {% endif %}
-      {% endfor %}
-
-      {# Check if there are nested elements #}
-      {% set hasNestedElements = false %}
-      {% for fieldKey, field in nestedRelatedElements %}
-        {% for section in field %}
-          {% if section|length %}
-            {% set hasNestedElements = true %}
-          {% endif %}
-        {% endfor %}
-      {% endfor %}
-
-      {% if hasOutgoingElements or hasNestedElements %}
-        <div class="field relationship-section-header" style="padding-block: 8px; padding-inline: var(--m); background-color: var(--gray-050); border-radius: 4px; margin-bottom: 4px;">
-          <div class="flex flex-nowrap gap-s items-center">
-            <strong style="font-size: 14px; color: var(--gray-700);">References</strong>
-            <div style="position: relative; display: inline-block;">
-              <button type="button" class="info-icon-btn" style="background: none; border: none; padding: 2px; cursor: pointer; display: flex; align-items: center;" title="Show info">
-                <span class="cp-icon small" style="color: var(--gray-500); opacity: 0.7;">
-                  {{ iconSvg('info') }}
-                </span>
-              </button>
-              <div class="info-tooltip" style="display: none; position: absolute; background: var(--gray-900); color: white; padding: 8px 12px; border-radius: 4px; font-size: 11px; z-index: 1000; white-space: nowrap; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px;">
-                Elements this {{ elementType }} links to
-                <div style="position: absolute; top: -4px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 4px solid var(--gray-900);"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {# Display direct outgoing relationships #}
-        {% for key, section in outgoingRelatedElements %}
-          {% if section|length %}
-            {% for element in section %}
-              {% set elementIndex = elementIndex + 1 %}
-              <div class="field related-element-item outgoing-element" data-index="{{ elementIndex - 1 }}" style="padding-block: 12px; padding-inline: var(--m) var(--s);">
-                <div class="flex flex-nowrap gap-s" style="padding-left: var(--m);">
-                  {% if key == 'Tag' %}
-                    <a href="#" class="flex flex-nowrap gap-s items-center tag-link" data-tag-id="{{ element.id }}">
-                  {% else %}
-                    <a href="{{ element.cpEditUrl ?? '#' }}" class="flex flex-nowrap gap-s items-center">
-                  {% endif %}
-                    <span class="status small {{ element.status }}" role="img" aria-label="Status: {{ element.status }}" style="margin-inline-end: 0;"></span>
-                    <span class="cp-icon small"{% if element.type is defined and element.type.color is defined and element.type.color %} style="color: {{ element.type.color.value }} !important; --icon-color: {{ element.type.color.value }};"{% endif %}>
-                      {% if element.type is defined and element.type.icon is defined and element.type.icon %}
-                        {{ iconSvg(element.type.icon) }}
-                      {% else %}
-                        {% switch key %}
-                          {% case 'Entry' %}
-                            {{ iconSvg('newspaper') }}
-                          {% case 'Category' %}
-                            {{ iconSvg('sitemap') }}
-                          {% case 'Asset' %}
-                            {{ iconSvg('asset') }}
-                          {% case 'Tag' %}
-                            {{ iconSvg('tags') }}
-                        {% endswitch %}
-                      {% endif %}
-                    </span>
-                    <span style="word-break: break-word;">
-                      {{ element.title ?? element.id }}
-                    </span>
-                    {% if showElementTypeLabel %}{{ _self.elementTypePill(key) }}{% endif %}
-                  </a>
-                </div>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endfor %}
-
-        {# Display nested field relationships within References section #}
-        {% for fieldKey, field in nestedRelatedElements %}
-          {% set hasFieldElements = false %}
-          {% for section in field %}
-            {% if section|length %}
-              {% set hasFieldElements = true %}
-            {% endif %}
-          {% endfor %}
-
-          {% if hasFieldElements %}
-            {% set headerIndex = elementIndex %}
-            <div class="field nested-field-header" data-index="{{ headerIndex }}" style="padding-block: 8px; padding-inline: var(--m); border-radius: 4px; margin-bottom: 4px; margin-top: 8px;">
-              <div class="flex flex-nowrap gap-s items-center" style="padding-left: var(--m);">
-                <strong style="font-size: 12px; color: var(--gray-700);">{{ fieldKey }}</strong>
-              </div>
-            </div>
-
-            {% for key, section in field %}
-              {% if section|length %}
-                {% for element in section %}
-                  {% set elementIndex = elementIndex + 1 %}
-                  <div class="field related-element-item nested-element" data-index="{{ elementIndex - 1 }}" data-header="{{ headerIndex }}" style="min-height: 34px; padding-top: 0; padding-bottom: 12px; padding-right: var(--m); border-top: none;">
-                    <div class="flex flex-nowrap gap-s items-center" style="padding-left: calc(var(--s) * 4);">
-                      <span style="position: relative; top: -3px;">∟</span>
-                      {% if key == 'Tag' %}
-                        <a href="#" class="flex flex-nowrap gap-s items-center tag-link" data-tag-id="{{ element.id }}">
-                      {% else %}
-                        <a href="{{ element.cpEditUrl ?? '#' }}" class="flex flex-nowrap gap-s items-center">
-                      {% endif %}
-                        <span class="status small {{ element.status }}" role="img" aria-label="Status: {{ element.status }}" style="margin-inline-end: 0;"></span>
-                        <span class="cp-icon small"{% if element.type is defined and element.type.color is defined and element.type.color %} style="color: {{ element.type.color.value }} !important; --icon-color: {{ element.type.color.value }};"{% endif %}>
-                          {% if element.type is defined and element.type.icon is defined and element.type.icon %}
-                            {{ iconSvg(element.type.icon) }}
-                          {% else %}
-                            {% switch key %}
-                              {% case 'Entry' %}
-                                {{ iconSvg('newspaper') }}
-                              {% case 'Category' %}
-                                {{ iconSvg('sitemap') }}
-                              {% case 'Asset' %}
-                                {{ iconSvg('asset') }}
-                              {% case 'Tag' %}
-                                {{ iconSvg('tags') }}
-                            {% endswitch %}
-                          {% endif %}
-                        </span>
-                        <span style="word-break: break-word;">
-                          {{ element.title ?? element.id }}
-                        </span>
-                        {% if showElementTypeLabel %}{{ _self.elementTypePill(key) }}{% endif %}
-                      </a>
-                    </div>
-                  </div>
-                {% endfor %}
-              {% endif %}
-            {% endfor %}
-          {% endif %}
-        {% endfor %}
-      {% endif %}
-
-      {# Display incoming relationships (elements that reference this entry) #}
-      {% set hasIncomingElements = false %}
-      {% for key, section in incomingRelatedElements %}
-        {% if section|length %}
-          {% set hasIncomingElements = true %}
-        {% endif %}
-      {% endfor %}
-
-      {% if hasIncomingElements %}
-        {% if hasOutgoingElements or hasNestedElements %}
-          <div style="margin-top: 12px;"></div>
-        {% endif %}
-
-        <div class="field relationship-section-header" style="padding-block: 8px; padding-inline: var(--m); background-color: var(--gray-050); border-radius: 4px; margin-bottom: 4px;">
-          <div class="flex flex-nowrap gap-s items-center">
-            <strong style="font-size: 14px; color: var(--gray-700);">Referenced by</strong>
-            <div style="position: relative; display: inline-block;">
-              <button type="button" class="info-icon-btn" style="background: none; border: none; padding: 2px; cursor: pointer; display: flex; align-items: center;" title="Show info">
-                <span class="cp-icon small" style="color: var(--gray-500); opacity: 0.7;">
-                  {{ iconSvg('info') }}
-                </span>
-              </button>
-              <div class="info-tooltip" style="display: none; position: absolute; background: var(--gray-900); color: white; padding: 8px 12px; border-radius: 4px; font-size: 11px; z-index: 1000; white-space: nowrap; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px;">
-                Elements that link to this {{ elementType }}
-                <div style="position: absolute; top: -4px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 4px solid var(--gray-900);"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {% for key, section in incomingRelatedElements %}
-          {% if section|length %}
-            {% for element in section %}
-              {% set elementIndex = elementIndex + 1 %}
-                <div class="field related-element-item incoming-element" data-index="{{ elementIndex - 1 }}" style="padding-block: 12px; padding-inline: var(--m);">
-                  <div class="flex flex-nowrap gap-s items-center" style="padding-left: var(--m);">
-                    {% if key == 'Tag' %}
-                      <a href="#" class="flex flex-nowrap gap-s items-center tag-link" data-tag-id="{{ element.id }}">
-                    {% else %}
-                      <a href="{{ element.cpEditUrl ?? '#' }}" class="flex flex-nowrap gap-s items-center">
-                    {% endif %}
-                      <span class="status small {{ element.status }}" role="img" aria-label="Status: {{ element.status }}" style="margin-inline-end: 0;"></span>
-                      <span class="cp-icon small"{% if element.type is defined and element.type.color is defined and element.type.color %} style="color: {{ element.type.color.value }} !important; --icon-color: {{ element.type.color.value }};"{% endif %}>
-                        {% if element.type is defined and element.type.icon is defined and element.type.icon %}
-                          {{ iconSvg(element.type.icon) }}
-                        {% else %}
-                          {% switch key %}
-                            {% case 'Entry' %}
-                              {{ iconSvg('newspaper') }}
-                            {% case 'Category' %}
-                              {{ iconSvg('sitemap') }}
-                            {% case 'Asset' %}
-                              {{ iconSvg('asset') }}
-                            {% case 'Tag' %}
-                              {{ iconSvg('tags') }}
-                          {% endswitch %}
-                        {% endif %}
-                      </span>
-                      <span style="word-break: break-word;">
-                        {{ element.title ?? element.id }}
-                      </span>
-                      {% if showElementTypeLabel %}{{ _self.elementTypePill(key) }}{% endif %}
-                    </a>
-                  </div>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endfor %}
-      {% endif %}
-
-      {% if totalElements > (initialLimit ?? 10) %}
-        <div class="field show-more-container" style="padding-block: 6px; padding-inline: var(--m); border-top: none; margin-top: 8px;">
-          <button type="button" class="btn small show-more-btn">
-            Show {{ totalElements - (initialLimit ?? 10) }} more related elements
+  {% if references.items|length or referencedBy.items|length %}
+    {% for key, title in {references: 'References', referencedBy: 'Referenced by'} %}
+      {% set page = attribute(_context, key) %}
+      {% if page.items|length %}
+    <section class="related-elements-section" data-section="{{ key }}" data-cursor="{{ page.cursor ?? '' }}" data-initial-cursor="{{ page.cursor ?? '' }}">
+      <div class="field relationship-section-header">
+        <div class="flex flex-nowrap gap-s items-center">
+          <strong>{{ title }}</strong>
+          <button type="button" class="info-icon-btn" aria-label="About {{ title }}" aria-expanded="false">
+            <span class="cp-icon small">{{ iconSvg('info') }}</span>
           </button>
-          <button type="button" class="btn small show-less-btn" style="display: none;">
-            Show less
-          </button>
-        </div>
-      {% endif %}
-    {% else %}
-      <div class="field flex-1">
-        <div style="padding-block: 12px; padding-inline: var(--m);">
-          <p>No related elements found.</p>
+          <div class="info-tooltip hidden" role="tooltip">{{ key == 'references' ? 'Elements this element links to' : 'Elements that link to this element' }}</div>
         </div>
       </div>
-    {% endif %}
+      <div class="related-elements-items" aria-live="polite">
+        {% include 'related-elements/_items' with {items: page.items, showElementTypeLabel: showElementTypeLabel, loaded: false} only %}
+      </div>
+      <p class="related-elements-error hidden" role="alert"></p>
+      <div class="related-elements-actions{% if not page.hasMore %} hidden{% endif %}">
+        <button type="button" class="btn small related-elements-more">Show more {{ key == 'references' ? 'references' : 'referenced by' }}</button>
+        <button type="button" class="btn small related-elements-less hidden">Show less</button>
+        <span class="spinner hidden" aria-label="Loading"></span>
+      </div>
+    </section>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <div class="field flex-1 related-elements-empty"><p>No related elements found.</p></div>
+  {% endif %}
   </div>
 </fieldset>
 
-<script>
-  (function() {
-    'use strict';
+{% css %}
+.related-elements-section+.related-elements-section{margin-top:12px}.relationship-section-header{position:relative;padding:8px var(--m);margin-bottom:4px;border-radius:4px;background:var(--gray-050)}
+.relationship-section-header strong{font-size:14px;color:var(--gray-700)}.info-icon-btn{display:flex;align-items:center;padding:2px;border:0;background:none;color:var(--gray-500);cursor:pointer;opacity:.7}.info-tooltip{position:absolute;top:100%;left:var(--m);z-index:1000;margin-top:4px;padding:8px 12px;border-radius:4px;background:var(--gray-900);color:#fff;font-size:11px;white-space:nowrap}
+.related-element-item{padding-block:12px;padding-inline:var(--m) var(--s)}.related-element-link{display:flex;flex-wrap:nowrap;align-items:center;gap:var(--s);padding-left:var(--m)}
+.related-element-title{min-width:0;overflow-wrap:anywhere}.element-type-pill{display:inline-block;padding:0 5px;border:1px solid var(--gray-200);border-radius:8px;color:var(--gray-700);background:var(--gray-050);font-size:8px;line-height:14px;font-weight:500;text-transform:uppercase;letter-spacing:.2px}
+.related-elements-sidebar .cp-icon[style*="--icon-color"] svg,.related-elements-sidebar .cp-icon[style*="--icon-color"] svg *{fill:var(--icon-color)!important;stroke:var(--icon-color)!important;color:var(--icon-color)!important}
+.related-elements-actions{display:flex;align-items:center;gap:6px;padding:6px var(--m);border-top:0}.related-elements-empty,.related-elements-error{margin:0;padding:10px var(--m)}.related-elements-error{color:var(--red-600)}
+{% endcss %}
 
-    const initialLimit = {{ initialLimit ?? 10 }};
-
-    function initializeRelatedElements() {
-      const items = document.querySelectorAll('.related-elements-sidebar .related-element-item[data-index]');
-      const headers = document.querySelectorAll('.related-elements-sidebar .nested-field-header[data-index], .related-elements-sidebar .relationship-section-header');
-      const showMoreBtn = document.querySelector('.related-elements-sidebar .show-more-btn');
-      const showLessBtn = document.querySelector('.related-elements-sidebar .show-less-btn');
-
-      // Initialize info icon tooltips
-      const infoButtons = document.querySelectorAll('.related-elements-sidebar .info-icon-btn');
-      infoButtons.forEach(function(button) {
-        const tooltip = button.nextElementSibling;
-        let isVisible = false;
-
-        button.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          // Hide all other tooltips
-          document.querySelectorAll('.related-elements-sidebar .info-tooltip').forEach(function(otherTooltip) {
-            if (otherTooltip !== tooltip) {
-              otherTooltip.style.display = 'none';
-            }
-          });
-
-          // Toggle current tooltip
-          isVisible = !isVisible;
-          tooltip.style.display = isVisible ? 'block' : 'none';
-        });
+{% js %}
+(() => {
+  document.querySelectorAll('.related-elements-sidebar').forEach((sidebar) => {
+    if (sidebar.dataset.initialized) return;
+    sidebar.dataset.initialized = 'true';
+    const requestPage = async (section, cursor) => {
+      const error = section.querySelector('.related-elements-error');
+      const spinner = section.querySelector('.spinner');
+      error.classList.add('hidden'); spinner.classList.remove('hidden');
+      section.querySelectorAll('button').forEach((button) => button.disabled = true);
+      try {
+        const response = await Craft.sendActionRequest('POST', '{{ pageUrl }}', {data: {
+          elementId: Number(sidebar.dataset.elementId), siteId: Number(sidebar.dataset.siteId),
+            section: section.dataset.section, cursor: cursor || null,
+        }});
+        return response.data;
+      } catch (exception) {
+        error.textContent = exception?.response?.data?.message || 'Could not load related elements. Please try again.';
+        error.classList.remove('hidden'); return null;
+      } finally {
+        spinner.classList.add('hidden'); section.querySelectorAll('button').forEach((button) => button.disabled = false);
+      }
+    };
+    const updateControls = (section, data, expanded) => {
+      const actions = section.querySelector('.related-elements-actions');
+      section.dataset.cursor = data.cursor || '';
+      actions.classList.toggle('hidden', !data.hasMore && !expanded);
+      section.querySelector('.related-elements-more').classList.toggle('hidden', !data.hasMore);
+      section.querySelector('.related-elements-less').classList.toggle('hidden', !expanded);
+    };
+    sidebar.querySelectorAll('.related-elements-section').forEach((section) => {
+      const items = section.querySelector('.related-elements-items');
+      section.querySelector('.related-elements-more').addEventListener('click', async () => {
+        const data = await requestPage(section, section.dataset.cursor); if (!data) return;
+        items.insertAdjacentHTML('beforeend', data.html); updateControls(section, data, true);
       });
-
-      // Hide tooltips when clicking outside
-      document.addEventListener('click', function(e) {
-        if (!e.target.closest('.info-icon-btn') && !e.target.closest('.info-tooltip')) {
-          document.querySelectorAll('.related-elements-sidebar .info-tooltip').forEach(function(tooltip) {
-            tooltip.style.display = 'none';
-          });
-        }
+      section.querySelector('.related-elements-less').addEventListener('click', () => {
+        items.querySelectorAll('[data-loaded="true"]').forEach((item) => item.remove());
+        const cursor = section.dataset.initialCursor; updateControls(section, {cursor, hasMore: cursor !== ''}, false);
       });
-
-      if (items.length <= initialLimit) {
-        return;
-      }
-
-      function hideElementsAndHeaders() {
-        items.forEach(function(item, index) {
-          if (index >= initialLimit) {
-            item.style.display = 'none';
-          }
-        });
-
-        // Hide section headers if all their elements are hidden
-        const sectionHeaders = document.querySelectorAll('.related-elements-sidebar .relationship-section-header');
-        sectionHeaders.forEach(function(header) {
-          const nextElements = [];
-          let nextSibling = header.nextElementSibling;
-
-          while (nextSibling && !nextSibling.classList.contains('relationship-section-header') && !nextSibling.classList.contains('nested-field-header')) {
-            if (nextSibling.classList.contains('related-element-item')) {
-              nextElements.push(nextSibling);
-            }
-            nextSibling = nextSibling.nextElementSibling;
-          }
-
-          const hasVisibleElements = nextElements.some(el => el.style.display !== 'none');
-          header.style.display = hasVisibleElements ? '' : 'none';
-        });
-
-        // Handle nested field headers
-        const nestedHeaders = document.querySelectorAll('.related-elements-sidebar .nested-field-header[data-index]');
-        nestedHeaders.forEach(function(header) {
-          const headerIndex = parseInt(header.getAttribute('data-index'));
-          const relatedElements = document.querySelectorAll('.related-element-item[data-header="' + headerIndex + '"]');
-          let hasVisibleElements = false;
-
-          relatedElements.forEach(function(element) {
-            if (element.style.display !== 'none') {
-              hasVisibleElements = true;
-            }
-          });
-
-          header.style.display = hasVisibleElements ? '' : 'none';
-        });
-      }
-
-      function showAllElementsAndHeaders() {
-        items.forEach(function(item) {
-          item.style.display = '';
-        });
-
-        headers.forEach(function(header) {
-          header.style.display = '';
-        });
-      }
-
-      hideElementsAndHeaders();
-
-      if (showMoreBtn) {
-        showMoreBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          showAllElementsAndHeaders();
-          showMoreBtn.style.display = 'none';
-          if (showLessBtn) {
-            showLessBtn.style.display = '';
-          }
-        });
-      }
-
-      if (showLessBtn) {
-        showLessBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          hideElementsAndHeaders();
-          showLessBtn.style.display = 'none';
-          if (showMoreBtn) {
-            showMoreBtn.style.display = '';
-          }
-        });
-      }
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeRelatedElements);
-    } else {
-      setTimeout(initializeRelatedElements, 100);
-    }
-
-    // Handle tag link clicks using event delegation to prevent duplicate listeners
-    // Only add the listener if it hasn't been added already
-    if (!window.relatedElementsTagListenerAdded) {
-      window.relatedElementsTagListenerAdded = true;
-
-      document.addEventListener('click', function(e) {
-        // Check if the clicked element is a tag link within the related elements sidebar
-        if (e.target.closest('.related-elements-sidebar .tag-link')) {
-          e.preventDefault();
-          const tagLink = e.target.closest('.tag-link');
-          const tagId = tagLink.getAttribute('data-tag-id');
-          if (tagId && window.Craft && window.Craft.createElementEditor) {
-            window.Craft.createElementEditor('craft\\elements\\Tag', {
-              elementId: parseInt(tagId),
-            });
-          }
-        }
-      });
-    }
-  })();
-</script>
+    });
+    sidebar.querySelectorAll('.info-icon-btn').forEach((button) => button.addEventListener('click', () => {
+      const tooltip = button.nextElementSibling;
+      const expanded = button.getAttribute('aria-expanded') === 'true';
+      sidebar.querySelectorAll('.info-tooltip').forEach((item) => item.classList.add('hidden'));
+      sidebar.querySelectorAll('.info-icon-btn').forEach((item) => item.setAttribute('aria-expanded', 'false'));
+      if (!expanded) { tooltip.classList.remove('hidden'); button.setAttribute('aria-expanded', 'true'); }
+    }));
+  });
+  if (!window.relatedElementsTagListenerAdded) {
+    window.relatedElementsTagListenerAdded = true;
+    document.addEventListener('click', (event) => {
+      const link = event.target.closest('.related-elements-sidebar .tag-link'); if (!link) return;
+      event.preventDefault(); Craft.createElementEditor('craft\\elements\\Tag', {elementId: Number(link.dataset.tagId)});
+    });
+  }
+})();
+{% endjs %}

@@ -1,5 +1,20 @@
 # Release Notes for Related Elements
 
+## 1.3.0 - Unreleased
+
+### Added
+
+- Independent server-side pagination for the References and Referenced by sections.
+- Global relation-type filters.
+- Entry-type scoping via plugin settings or `enabledEntryTypeUids` configuration.
+- Section scoping via plugin settings or `enabledSectionUids` configuration.
+
+### Fixed
+
+- Prevent memory exhaustion when elements have thousands of relationships.
+- Resolve incoming Matrix and Neo relationships to their primary owner.
+- Match custom entry-type icon colors to Craft's control panel palette.
+
 ## 1.2.0 - 2025-05-29
 
 ### Added
