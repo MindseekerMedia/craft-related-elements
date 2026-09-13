@@ -33,14 +33,15 @@ class Relations
             ? $this->referencesQuery($element, $enabledTypes, $includeNested)
             : $this->referencedByQuery($element, $enabledTypes);
 
-        $ids = $query->offset($offset)->limit($limit + 1)->column();
-        $hasMore = count($ids) > $limit;
+        $rows = $query->offset($offset)->limit($limit + 1)->all();
+        $hasMore = count($rows) > $limit;
         if ($hasMore) {
-            array_pop($ids);
+            array_pop($rows);
         }
 
         $items = [];
-        foreach ($ids as $id) {
+        foreach ($rows as $row) {
+            $id = (int)$row['displayId'];
             $related = Craft::$app->getElements()->getElementById((int)$id, null, $element->siteId)
                 ?? Craft::$app->getElements()->getElementById((int)$id);
             if (!$related || $related->id === $element->id || !Craft::$app->getElements()->canView($related)) {
@@ -48,13 +49,22 @@ class Relations
             }
             $type = $this->typeHandle($related);
             if ($type !== null && in_array($type, $enabledTypes, true)) {
-                $items[] = ['element' => $related, 'type' => $type];
+                $items[] = [
+                    'element' => $related,
+                    'type' => $type,
+                    'fieldLabel' => isset($row['sourceId']) && (int)$row['sourceId'] !== 0
+                        ? $this->nestedFieldLabel((int)$row['sourceId'], $element->id)
+                        : null,
+                ];
             }
         }
 
+        usort($items, static fn(array $a, array $b): int => [isset($a['fieldLabel']), $a['fieldLabel'] ?? '', $a['element']->id]
+            <=> [isset($b['fieldLabel']), $b['fieldLabel'] ?? '', $b['element']->id]);
+
         return [
             'items' => $items,
-            'cursor' => $hasMore ? $this->encodeCursor($offset + count($ids)) : null,
+            'cursor' => $hasMore ? $this->encodeCursor($offset + count($rows)) : null,
             'hasMore' => $hasMore,
         ];
     }
@@ -65,8 +75,10 @@ class Relations
         $sourceIds[] = $element->id;
 
         return (new Query())
-            ->select(['displayId' => 'COALESCE([[displayElements.canonicalId]], [[displayElements.id]])'])
-            ->distinct()
+            ->select([
+                'displayId' => 'COALESCE([[displayElements.canonicalId]], [[displayElements.id]])',
+                'sourceId' => "MIN(CASE WHEN [[r.sourceId]] = {$element->id} THEN 0 ELSE [[r.sourceId]] END)",
+            ])
             ->from(['r' => '{{%relations}}'])
             ->innerJoin(['displayElements' => '{{%elements}}'], '[[displayElements.id]] = [[r.targetId]]')
             ->where([
@@ -75,6 +87,7 @@ class Relations
                 'displayElements.dateDeleted' => null,
             ])
             ->andWhere(['or', ['r.sourceSiteId' => $element->siteId], ['r.sourceSiteId' => null]])
+            ->groupBy(['displayId'])
             ->orderBy(['displayId' => SORT_ASC]);
     }
 
@@ -124,6 +137,35 @@ class Relations
         }
 
         return $found;
+    }
+
+    private function nestedFieldLabel(int $sourceId, int $topLevelOwnerId): ?string
+    {
+        $labels = [];
+        $currentId = $sourceId;
+        $visited = [];
+
+        while ($currentId !== $topLevelOwnerId && !isset($visited[$currentId])) {
+            $visited[$currentId] = true;
+            $fieldId = (new Query())->select(['fieldId'])->from('{{%entries}}')->where(['id' => $currentId])->scalar();
+            if ($fieldId === false && Craft::$app->getDb()->getSchema()->getTableSchema('{{%neoblocks}}', true) !== null) {
+                $fieldId = (new Query())->select(['fieldId'])->from('{{%neoblocks}}')->where(['id' => $currentId])->scalar();
+            }
+            if ($fieldId !== false) {
+                $field = Craft::$app->getFields()->getFieldById((int)$fieldId);
+                if ($field !== null) {
+                    $labels[] = $field->name;
+                }
+            }
+
+            $ownerId = (new Query())->select(['ownerId'])->from('{{%elements_owners}}')->where(['elementId' => $currentId])->scalar();
+            if ($ownerId === false) {
+                break;
+            }
+            $currentId = (int)$ownerId;
+        }
+
+        return $labels ? implode(' → ', array_reverse($labels)) : null;
     }
 
     private function typeHandle(Element $element): ?string

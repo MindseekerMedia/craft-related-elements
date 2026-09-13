@@ -1,3 +1,8 @@
+{% set currentField = null %}
 {% for item in items %}
-  {% include 'related-elements/_element-item' with {element: item.element, type: item.type, showElementTypeLabel: showElementTypeLabel, loaded: loaded} only %}
+  {% if item.fieldLabel and item.fieldLabel != currentField %}
+    <div class="field nested-field-header" data-loaded="{{ loaded ? 'true' : 'false' }}"><strong>{{ item.fieldLabel }}</strong></div>
+    {% set currentField = item.fieldLabel %}
+  {% endif %}
+  {% include 'related-elements/_element-item' with {element: item.element, type: item.type, fieldLabel: item.fieldLabel, showElementTypeLabel: showElementTypeLabel, loaded: loaded} only %}
 {% endfor %}
