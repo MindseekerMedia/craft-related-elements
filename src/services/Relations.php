@@ -4,6 +4,7 @@ namespace mindseekermedia\craftrelatedelements\services;
 
 use Craft;
 use craft\base\Element;
+use craft\base\Field;
 use craft\db\Query;
 use craft\elements\Asset;
 use craft\elements\Category;
@@ -54,7 +55,7 @@ class Relations
                     'type' => $type,
                     'fieldLabel' => isset($row['sourceId']) && (int)$row['sourceId'] !== 0
                         ? $this->nestedFieldLabel((int)$row['sourceId'], $element->id)
-                        : null,
+                        : $this->ckeditorFieldLabel(isset($row['directFieldId']) ? (int)$row['directFieldId'] : null),
                 ];
             }
         }
@@ -74,10 +75,11 @@ class Relations
         $sourceIds = $includeNested ? $this->ownedElementIds($element->id) : [];
         $sourceIds[] = $element->id;
 
-        return (new Query())
+        $query = (new Query())
             ->select([
                 'displayId' => 'COALESCE([[displayElements.canonicalId]], [[displayElements.id]])',
                 'sourceId' => "MIN(CASE WHEN [[r.sourceId]] = {$element->id} THEN 0 ELSE [[r.sourceId]] END)",
+                'directFieldId' => "MIN(CASE WHEN [[r.sourceId]] = {$element->id} THEN [[r.fieldId]] ELSE NULL END)",
             ])
             ->from(['r' => '{{%relations}}'])
             ->innerJoin(['displayElements' => '{{%elements}}'], '[[displayElements.id]] = [[r.targetId]]')
@@ -89,6 +91,20 @@ class Relations
             ->andWhere(['or', ['r.sourceSiteId' => $element->siteId], ['r.sourceSiteId' => null]])
             ->groupBy(['displayId'])
             ->orderBy(['displayId' => SORT_ASC]);
+
+        if (!$includeNested) {
+            $ckeditorFieldIds = [];
+            foreach (Craft::$app->getFields()->getAllFields() as $field) {
+                if ($this->isCkeditorField($field)) {
+                    $ckeditorFieldIds[] = $field->id;
+                }
+            }
+            if ($ckeditorFieldIds) {
+                $query->andWhere(['not', ['r.fieldId' => $ckeditorFieldIds]]);
+            }
+        }
+
+        return $query;
     }
 
     private function referencedByQuery(Element $element, array $enabledTypes): Query
@@ -166,6 +182,21 @@ class Relations
         }
 
         return $labels ? implode(' → ', array_reverse($labels)) : null;
+    }
+
+    private function ckeditorFieldLabel(?int $fieldId): ?string
+    {
+        if ($fieldId === null) {
+            return null;
+        }
+
+        $field = Craft::$app->getFields()->getFieldById($fieldId);
+        return $field !== null && $this->isCkeditorField($field) ? $field->name : null;
+    }
+
+    private function isCkeditorField(Field $field): bool
+    {
+        return $field::class === 'craft\\ckeditor\\Field' || is_subclass_of($field, 'craft\\ckeditor\\Field');
     }
 
     private function typeHandle(Element $element): ?string

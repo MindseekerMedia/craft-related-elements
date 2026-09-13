@@ -80,6 +80,13 @@ class RelatedElements extends Plugin
             'element' => $element,
             'references' => $references,
             'referencedBy' => $referencedBy,
+            'elementType' => match (true) {
+                $element instanceof Entry => 'entry',
+                $element instanceof Category => 'category',
+                $element instanceof Asset => 'asset',
+                $element instanceof Tag => 'tag',
+                default => 'element',
+            },
             'showElementTypeLabel' => self::$settings->showElementTypeLabel,
             'pageUrl' => 'related-elements/relations/page',
         ]);
