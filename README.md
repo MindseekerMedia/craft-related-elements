@@ -54,7 +54,7 @@ return [
 - **initialLimit** (integer, default: `10`) - Number of related elements to show initially before requiring "Show More" to expand the list.
 - **showElementTypeLabel** (boolean, default: `true`) - Whether to display the element type labels (Entry, Category, Asset, Tag) next to each related element.
 - **defaultElementTypes** (array, default: all types) - Element types shown in the sidebar. Supported values are `entries`, `categories`, `assets`, and `tags`.
-- **enabledEntryTypeUids** (array, default: `[]`) - Entry type UIDs where the sidebar is enabled. An empty array enables all entry types.
-- **enabledSectionUids** (array, default: `[]`) - Section UIDs where the sidebar is enabled. An empty array enables all sections.
+- **enabledEntryTypeUids** (array, default: `[]`) - Entry type UIDs where the sidebar is enabled. An empty array or `['*']` enables all entry types.
+- **enabledSectionUids** (array, default: `[]`) - Section UIDs where the sidebar is enabled. An empty array or `['*']` enables all sections.
 
 The initial limit is applied separately to the **References** and **Referenced by** sections. Each section loads additional results on demand, so large relationship sets are not loaded into memory when the editor opens.

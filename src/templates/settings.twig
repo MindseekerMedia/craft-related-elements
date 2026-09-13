@@ -15,41 +15,6 @@
     disabled: configFileSettings.enableNestedElements is defined,
   }) }}
 
-  {{ forms.checkboxGroupField({
-    label: 'Related element types',
-    instructions: 'Element types that are loaded and shown in the Related Elements sidebar.',
-    name: 'defaultElementTypes',
-    values: settings.defaultElementTypes,
-    options: [
-      {label: 'Entries', value: 'entries'},
-      {label: 'Categories', value: 'categories'},
-      {label: 'Assets', value: 'assets'},
-      {label: 'Tags', value: 'tags'},
-    ],
-    warning: configFileSettings.defaultElementTypes is defined ? 'This setting is being overridden by the "defaultElementTypes" setting in your related-elements.php config file.' : null,
-    disabled: configFileSettings.defaultElementTypes is defined,
-  }) }}
-
-  {{ forms.checkboxGroupField({
-    label: 'Enabled sections',
-    instructions: 'Only show Related Elements for entries in these sections. Leave all unchecked to enable every section.',
-    name: 'enabledSectionUids',
-    values: settings.enabledSectionUids,
-    options: sectionOptions,
-    warning: configFileSettings.enabledSectionUids is defined ? 'This setting is being overridden by the "enabledSectionUids" setting in your related-elements.php config file.' : null,
-    disabled: configFileSettings.enabledSectionUids is defined,
-  }) }}
-
-  {{ forms.checkboxGroupField({
-    label: 'Enabled entry types',
-    instructions: 'Only show Related Elements on these entry types. Leave all unchecked to enable every entry type.',
-    name: 'enabledEntryTypeUids',
-    values: settings.enabledEntryTypeUids,
-    options: entryTypeOptions,
-    warning: configFileSettings.enabledEntryTypeUids is defined ? 'This setting is being overridden by the "enabledEntryTypeUids" setting in your related-elements.php config file.' : null,
-    disabled: configFileSettings.enabledEntryTypeUids is defined,
-  }) }}
-
   {{ forms.lightswitchField({
     label: 'Show element type labels',
     instructions: 'Whether to display the element type labels (Entry, Category, Asset, Tag) next to each related element.',
@@ -72,4 +37,59 @@
     warning: configFileSettings.initialLimit is defined ? 'This setting is being overridden by the "initialLimit" setting in your related-elements.php config file.' : null,
     disabled: configFileSettings.initialLimit is defined,
   }) }}
+
+  {{ forms.checkboxGroupField({
+    label: 'Related element types',
+    instructions: 'Choose which kinds of related elements are loaded and shown in the sidebar.',
+    name: 'defaultElementTypes',
+    values: settings.defaultElementTypes,
+    options: [
+      {label: 'Entries', value: 'entries'},
+      {label: 'Categories', value: 'categories'},
+      {label: 'Assets', value: 'assets'},
+      {label: 'Tags', value: 'tags'},
+    ],
+    warning: configFileSettings.defaultElementTypes is defined ? 'This setting is being overridden by the "defaultElementTypes" setting in your related-elements.php config file.' : null,
+    disabled: configFileSettings.defaultElementTypes is defined,
+  }) }}
+
+  {{ forms.checkboxGroupField({
+    label: 'Enabled entry types',
+    instructions: 'Choose where the Related Elements sidebar is available.',
+    id: 'enabled-entry-types',
+    name: 'enabledEntryTypeUids',
+    values: settings.enabledEntryTypeUids is empty ? ['*'] : settings.enabledEntryTypeUids,
+    options: [{label: 'All entry types', value: '*'}]|merge(entryTypeOptions),
+    warning: configFileSettings.enabledEntryTypeUids is defined ? 'This setting is being overridden by the "enabledEntryTypeUids" setting in your related-elements.php config file.' : null,
+    disabled: configFileSettings.enabledEntryTypeUids is defined,
+  }) }}
+
+  {{ forms.checkboxGroupField({
+    label: 'Enabled sections',
+    instructions: 'Choose which sections display the Related Elements sidebar.',
+    id: 'enabled-sections',
+    name: 'enabledSectionUids',
+    values: settings.enabledSectionUids is empty ? ['*'] : settings.enabledSectionUids,
+    options: [{label: 'All sections', value: '*'}]|merge(sectionOptions),
+    warning: configFileSettings.enabledSectionUids is defined ? 'This setting is being overridden by the "enabledSectionUids" setting in your related-elements.php config file.' : null,
+    disabled: configFileSettings.enabledSectionUids is defined,
+  }) }}
 </div>
+
+{% js %}
+['enabled-entry-types', 'enabled-sections'].forEach((id) => {
+  const group = document.getElementById(`settings-${id}`);
+  if (!group) return;
+  const checkboxes = Array.from(group.querySelectorAll('input[type="checkbox"]'));
+  const all = checkboxes.find((checkbox) => checkbox.value === '*');
+  if (!all) return;
+  checkboxes.forEach((checkbox) => checkbox.addEventListener('change', () => {
+    if (checkbox === all && all.checked) {
+      checkboxes.filter((item) => item !== all).forEach((item) => item.checked = false);
+    } else if (checkbox !== all && checkbox.checked) {
+      all.checked = false;
+    }
+    if (!checkboxes.some((item) => item.checked)) all.checked = true;
+  }));
+});
+{% endjs %}

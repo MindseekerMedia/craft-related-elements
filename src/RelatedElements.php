@@ -59,14 +59,14 @@ class RelatedElements extends Plugin
     private function entryTypeEnabled(Entry $entry): bool
     {
         $enabled = self::$settings->enabledEntryTypeUids;
-        return !$enabled || in_array($entry->getType()->uid, $enabled, true);
+        return !$enabled || in_array('*', $enabled, true) || in_array($entry->getType()->uid, $enabled, true);
     }
 
     private function sectionEnabled(Entry $entry): bool
     {
         $enabled = self::$settings->enabledSectionUids;
         $section = $entry->getSection();
-        return !$enabled || ($section !== null && in_array($section->uid, $enabled, true));
+        return !$enabled || in_array('*', $enabled, true) || ($section !== null && in_array($section->uid, $enabled, true));
     }
 
     private function renderSidebar(Element $element): string
