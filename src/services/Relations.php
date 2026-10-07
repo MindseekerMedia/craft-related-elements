@@ -11,6 +11,7 @@ use craft\elements\Category;
 use craft\elements\Entry;
 use craft\elements\Tag;
 use craft\helpers\Json;
+use yii\db\Expression;
 
 class Relations
 {
@@ -21,12 +22,15 @@ class Relations
         'tags' => Tag::class,
     ];
 
+    private array $nestedOwners = [];
+
     public function page(Element $element, string $section, array $enabledTypes, ?string $cursor, int $limit, bool $includeNested = true): array
     {
         $enabledTypes = array_values(array_intersect(array_keys(self::TYPES), $enabledTypes));
+        $limit = max(1, min(100, $limit));
         $offset = $this->decodeCursor($cursor);
 
-        if (!$enabledTypes) {
+        if (!$element->id || !$enabledTypes) {
             return ['items' => [], 'cursor' => null, 'hasMore' => false];
         }
 
@@ -45,7 +49,7 @@ class Relations
             $id = (int)$row['displayId'];
             $related = Craft::$app->getElements()->getElementById((int)$id, null, $element->siteId)
                 ?? Craft::$app->getElements()->getElementById((int)$id);
-            if (!$related || $related->id === $element->id || !Craft::$app->getElements()->canView($related)) {
+            if (!$related || $related->getCanonicalId() === $element->getCanonicalId() || !Craft::$app->getElements()->canView($related)) {
                 continue;
             }
             $type = $this->typeHandle($related);
@@ -83,11 +87,14 @@ class Relations
             ])
             ->from(['r' => '{{%relations}}'])
             ->innerJoin(['displayElements' => '{{%elements}}'], '[[displayElements.id]] = [[r.targetId]]')
+            ->innerJoin(['sourceElements' => '{{%elements}}'], '[[sourceElements.id]] = [[r.sourceId]]')
             ->where([
                 'r.sourceId' => array_values(array_unique($sourceIds)),
                 'displayElements.type' => array_values(array_intersect_key(self::TYPES, array_flip($enabledTypes))),
                 'displayElements.dateDeleted' => null,
+                'sourceElements.dateDeleted' => null,
             ])
+            ->andWhere(['<>', new Expression('COALESCE([[displayElements.canonicalId]], [[displayElements.id]])'), $element->getCanonicalId()])
             ->andWhere(['or', ['r.sourceSiteId' => $element->siteId], ['r.sourceSiteId' => null]])
             ->groupBy(['displayId'])
             ->orderBy(['displayId' => SORT_ASC]);
@@ -104,47 +111,102 @@ class Relations
             }
         }
 
+        if ($includeNested && in_array('entries', $enabledTypes, true)) {
+            // Ownership is separate from relations: CKEditor and Matrix entries
+            // must also appear when they contain no relational fields.
+            $nested = (new Query())
+                ->select([
+                    'displayId' => 'COALESCE([[nested.canonicalId]], [[nested.id]])',
+                    'sourceId' => 'nested.id',
+                    'directFieldId' => new Expression('NULL'),
+                ])
+                ->from(['nested' => '{{%elements}}'])
+                ->where([
+                    'nested.id' => array_values(array_diff($sourceIds, [$element->id])),
+                    'nested.type' => Entry::class,
+                    'nested.dateDeleted' => null,
+                ]);
+
+            $query->orderBy([])->union($nested, true);
+            return (new Query())
+                ->select([
+                    'displayId',
+                    'sourceId' => 'MIN([[sourceId]])',
+                    'directFieldId' => 'MIN([[directFieldId]])',
+                ])
+                ->from(['references' => $query])
+                ->groupBy(['displayId'])
+                ->orderBy(['displayId' => SORT_ASC]);
+        }
+
         return $query;
     }
 
     private function referencedByQuery(Element $element, array $enabledTypes): Query
     {
-        $primaryOwnerExpression = 'COALESCE([[entrySource.primaryOwnerId]], [[r.sourceId]])';
-        $query = (new Query())
-            ->distinct()
+        $sources = (new Query())
+            ->select(['id' => 'r.sourceId'])
             ->from(['r' => '{{%relations}}'])
-            ->leftJoin(['entrySource' => '{{%entries}}'], '[[entrySource.id]] = [[r.sourceId]]');
+            ->innerJoin(['sourceElements' => '{{%elements}}'], '[[sourceElements.id]] = [[r.sourceId]]')
+            ->where(['r.targetId' => $element->getCanonicalId()])
+            ->andWhere(['sourceElements.dateDeleted' => null, 'sourceElements.draftId' => null, 'sourceElements.revisionId' => null])
+            ->andWhere(['or', ['r.sourceSiteId' => $element->siteId], ['r.sourceSiteId' => null]]);
 
-        if (Craft::$app->getDb()->getSchema()->getTableSchema('{{%neoblocks}}', true) !== null) {
-            $query->leftJoin(['neoSource' => '{{%neoblocks}}'], '[[neoSource.id]] = [[r.sourceId]]');
-            $primaryOwnerExpression = 'COALESCE([[entrySource.primaryOwnerId]], [[neoSource.primaryOwnerId]], [[r.sourceId]])';
-        }
-
-        return $query
-            ->innerJoin(['displayElements' => '{{%elements}}'], "[[displayElements.id]] = $primaryOwnerExpression")
-            ->select(['displayId' => 'COALESCE([[displayElements.canonicalId]], [[displayElements.id]])'])
+        // Include owners of the nested entry itself, even without a relation row.
+        $sources->union((new Query())
+            ->select(['id' => 'ownership.ownerId'])
+            ->from(['ownership' => '{{%elements_owners}}'])
+            ->innerJoin(['owner' => '{{%elements}}'], '[[owner.id]] = [[ownership.ownerId]]')
             ->where([
-                'r.targetId' => $element->getCanonicalId(),
+                'ownership.elementId' => $element->getCanonicalId(),
+                'owner.dateDeleted' => null,
+                'owner.draftId' => null,
+                'owner.revisionId' => null,
+            ]), false);
+
+        // UNION (rather than UNION ALL) also guards against ownership cycles.
+        $sources->union((new Query())
+            ->select(['id' => 'ownership.ownerId'])
+            ->from(['ownership' => '{{%elements_owners}}'])
+            ->innerJoin(['ancestors' => 'relatedOwners'], '[[ancestors.id]] = [[ownership.elementId]]')
+            ->innerJoin(['owner' => '{{%elements}}'], '[[owner.id]] = [[ownership.ownerId]]')
+            ->where(['owner.dateDeleted' => null, 'owner.draftId' => null, 'owner.revisionId' => null]), false);
+
+        return (new Query())
+            ->withQuery($sources, 'relatedOwners', true)
+            ->distinct()
+            ->select(['displayId' => 'COALESCE([[displayElements.canonicalId]], [[displayElements.id]])'])
+            ->from(['ancestors' => 'relatedOwners'])
+            ->innerJoin(['displayElements' => '{{%elements}}'], '[[displayElements.id]] = [[ancestors.id]]')
+            ->leftJoin(['ownership' => '{{%elements_owners}}'], '[[ownership.elementId]] = [[displayElements.id]]')
+            ->where([
+                'ownership.ownerId' => null,
                 'displayElements.type' => array_values(array_intersect_key(self::TYPES, array_flip($enabledTypes))),
                 'displayElements.dateDeleted' => null,
+                'displayElements.draftId' => null,
+                'displayElements.revisionId' => null,
             ])
-            ->andWhere(['or', ['r.sourceSiteId' => $element->siteId], ['r.sourceSiteId' => null]])
-            ->andWhere(['not', ['displayElements.id' => $element->id]])
+            ->andWhere(['<>', new Expression('COALESCE([[displayElements.canonicalId]], [[displayElements.id]])'), $element->getCanonicalId()])
             ->orderBy(['displayId' => SORT_ASC]);
     }
 
     private function ownedElementIds(int $ownerId): array
     {
-        $found = [];
+        $this->nestedOwners = [];
+        $found = [$ownerId];
         $owners = [$ownerId];
 
         while ($owners) {
             $children = (new Query())
-                ->select(['elementId'])
-                ->from('{{%elements_owners}}')
-                ->where(['ownerId' => $owners])
-                ->column();
-            $children = array_values(array_diff(array_map('intval', $children), $found));
+                ->select(['elementId', 'ownerId'])
+                ->from(['ownership' => '{{%elements_owners}}'])
+                ->innerJoin(['child' => '{{%elements}}'], '[[child.id]] = [[ownership.elementId]]')
+                ->where(['ownerId' => $owners, 'child.dateDeleted' => null])
+                ->all();
+            foreach ($children as $child) {
+                $this->nestedOwners[(int)$child['elementId']] ??= (int)$child['ownerId'];
+            }
+            $children = array_values(array_diff(array_map('intval', array_column($children, 'elementId')), $found));
             if (!$children) {
                 break;
             }
@@ -152,7 +214,7 @@ class Relations
             $owners = $children;
         }
 
-        return $found;
+        return array_values(array_diff($found, [$ownerId]));
     }
 
     private function nestedFieldLabel(int $sourceId, int $topLevelOwnerId): ?string
@@ -164,6 +226,9 @@ class Relations
         while ($currentId !== $topLevelOwnerId && !isset($visited[$currentId])) {
             $visited[$currentId] = true;
             $fieldId = (new Query())->select(['fieldId'])->from('{{%entries}}')->where(['id' => $currentId])->scalar();
+            if ($fieldId === false && Craft::$app->getDb()->getSchema()->getTableSchema('{{%contentblocks}}', true) !== null) {
+                $fieldId = (new Query())->select(['fieldId'])->from('{{%contentblocks}}')->where(['id' => $currentId])->scalar();
+            }
             if ($fieldId === false && Craft::$app->getDb()->getSchema()->getTableSchema('{{%neoblocks}}', true) !== null) {
                 $fieldId = (new Query())->select(['fieldId'])->from('{{%neoblocks}}')->where(['id' => $currentId])->scalar();
             }
@@ -174,7 +239,7 @@ class Relations
                 }
             }
 
-            $ownerId = (new Query())->select(['ownerId'])->from('{{%elements_owners}}')->where(['elementId' => $currentId])->scalar();
+            $ownerId = $this->nestedOwners[$currentId] ?? false;
             if ($ownerId === false) {
                 break;
             }

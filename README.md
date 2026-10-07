@@ -50,7 +50,7 @@ return [
 
 ### Settings
 
-- **enableNestedElements** (boolean, default: `true`) - Whether to display the related elements that exist inside the CKEditor, Matrix or Neo fields of an element.
+- **enableNestedElements** (boolean, default: `true`) - Whether to display the related elements that exist inside Content Block, CKEditor, Matrix or Neo fields of an element. Content Block support requires Craft 5.8 or later.
 - **initialLimit** (integer, default: `10`) - Number of related elements to show initially before requiring "Show More" to expand the list.
 - **showElementTypeLabel** (boolean, default: `true`) - Whether to display the element type labels (Entry, Category, Asset, Tag) next to each related element.
 - **defaultElementTypes** (array, default: all types) - Element types shown in the sidebar. Supported values are `entries`, `categories`, `assets`, and `tags`.
@@ -58,3 +58,5 @@ return [
 - **enabledSectionUids** (array, default: `[]`) - Section UIDs where the sidebar is enabled. An empty array or `['*']` enables all sections.
 
 The initial limit is applied separately to the **References** and **Referenced by** sections. Each section loads additional results on demand, so large relationship sets are not loaded into memory when the editor opens.
+
+With nested elements enabled, **References** includes CKEditor and Matrix entries themselves, plus supported related elements inside Content Block, CKEditor, Matrix, and Neo fields at any nesting depth. Content Blocks and Neo blocks act as containers; their related elements are listed under the field name. **Referenced by** resolves nested sources to their top-level owners, including shared owners. Relationships use Craft's relation and ownership tables, without scanning every entry. Incoming results exclude drafts, revisions, and deleted containers.

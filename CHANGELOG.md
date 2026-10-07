@@ -1,6 +1,6 @@
 # Release Notes for Related Elements
 
-## 1.3.0 - Unreleased
+## 1.3.0 - 2026-10-07
 
 ### Added
 
@@ -12,7 +12,16 @@
 ### Fixed
 
 - Prevent memory exhaustion when elements have thousands of relationships.
-- Resolve incoming Matrix and Neo relationships to their primary owner.
+- Include nested CKEditor and Matrix entries even when they contain no relational fields.
+- Resolve incoming CKEditor, Matrix, and Neo relationships through all nesting levels and shared owners.
+- Keep nested field labels on the ownership path of the element being edited.
+- Resolve nested Content Block relationships in both directions and include their field labels.
+- Exclude deleted containers and historical draft/revision sources from incoming relationships.
+- Keep pagination available when the first result page contains only inaccessible elements.
+- Initialize native chip action menus and scripts for paginated results.
+- Exclude canonical self-references when editing drafts.
+- Avoid retaining detached sidebar selections in window event listeners.
+- Return empty relationship lists for unsaved elements.
 - Match custom entry-type icon colors to Craft's control panel palette.
 
 ## 1.2.0 - 2025-05-29

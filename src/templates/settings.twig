@@ -3,10 +3,10 @@
 {# Check for config file overrides #}
 {% set configFileSettings = craft.app.config.getConfigFromFile('related-elements') %}
 
-<div>
+<div class="related-elements-settings">
   {{ forms.lightswitchField({
     label: 'Display nested related elements',
-    instructions: 'Whether to display the related elements that exist inside the CKEditor, Matrix or Neo fields of an element.',
+    instructions: 'Whether to display the related elements that exist inside Content Block, CKEditor, Matrix or Neo fields of an element.',
     name: 'enableNestedElements',
     value: settings.enableNestedElements,
     on: (settings.enableNestedElements is defined) ? settings.enableNestedElements : '',
@@ -75,6 +75,13 @@
     disabled: configFileSettings.enabledSectionUids is defined,
   }) }}
 </div>
+
+{% css %}
+.related-elements-settings input.checkbox:disabled + label,
+.related-elements-settings input.checkbox:disabled + label:before {
+  opacity: .5;
+}
+{% endcss %}
 
 {% js %}
 ['enabled-entry-types', 'enabled-sections'].forEach((id) => {

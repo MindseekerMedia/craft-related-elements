@@ -1,10 +1,10 @@
 <fieldset class="related-elements-sidebar" data-element-id="{{ element.id }}" data-site-id="{{ element.siteId }}">
   <legend class="h6">Related elements</legend>
   <div class="meta">
-  {% if references.items|length or referencedBy.items|length %}
+  {% if references.items|length or referencedBy.items|length or references.hasMore or referencedBy.hasMore %}
     {% for key, title in {references: 'References', referencedBy: 'Referenced by'} %}
       {% set page = attribute(_context, key) %}
-      {% if page.items|length %}
+      {% if page.items|length or page.hasMore %}
     <section class="related-elements-section" data-section="{{ key }}" data-cursor="{{ page.cursor ?? '' }}" data-initial-cursor="{{ page.cursor ?? '' }}">
       <div class="field relationship-section-header">
         <div class="flex flex-nowrap gap-s items-center">
@@ -34,13 +34,12 @@
 </fieldset>
 
 {% css %}
-.related-elements-section+.related-elements-section{margin-top:12px}.relationship-section-header{position:relative;padding:8px var(--m);margin-bottom:4px;border-radius:4px;background:var(--gray-050)}
+.related-elements-section:last-child{padding-bottom:var(--m)}.related-elements-section+.related-elements-section{margin-top:12px}.relationship-section-header{position:relative;padding:8px var(--m);margin-bottom:4px;border-radius:4px;background:var(--gray-050)}
 .relationship-section-header strong{font-size:14px;color:var(--gray-700)}.info-icon-btn{display:flex;align-items:center;padding:2px;border:0;background:none;color:var(--gray-500);cursor:pointer;opacity:.7}.info-tooltip{position:absolute;top:100%;left:var(--m);z-index:1000;margin-top:4px;padding:8px 12px;border-radius:4px;background:var(--gray-900);color:#fff;font-size:11px;white-space:nowrap}
-.related-element-item{margin:0!important;padding-block:8px;padding-inline:var(--m) var(--s)}.related-element-link{display:flex;flex-wrap:nowrap;align-items:center;gap:var(--s);padding-left:var(--m)}
-.nested-field-header{margin:4px 0 0!important;padding:6px var(--m) 2px calc(var(--m) * 2);font-size:12px;color:var(--gray-700)}.nested-element{display:flex;align-items:flex-start;padding-left:calc(var(--m) * 2)}.nested-element .related-element-link{padding-left:4px}.nested-branch{position:relative;top:1px;color:var(--gray-500)}
-.related-element-title{min-width:0;overflow-wrap:anywhere}.element-type-pill{display:inline-block;padding:0 5px;border:1px solid var(--gray-200);border-radius:8px;color:var(--gray-700);background:var(--gray-050);font-size:8px;line-height:14px;font-weight:500;text-transform:uppercase;letter-spacing:.2px}
-.related-elements-sidebar .cp-icon[style*="--icon-color"] svg,.related-elements-sidebar .cp-icon[style*="--icon-color"] svg *{fill:var(--icon-color)!important;stroke:var(--icon-color)!important;color:var(--icon-color)!important}
-.related-elements-actions{display:flex;align-items:center;gap:6px;padding:6px var(--m);border-top:0}.related-elements-empty,.related-elements-error{margin:0;padding:10px var(--m)}.related-elements-error{color:var(--red-600)}
+.related-elements-items{margin-inline:calc(var(--neg-padding) + var(--s) + var(--xs))}.related-element-item{display:flex;align-items:center;gap:var(--s);margin:0!important;padding-block:4px;padding-inline:var(--s)}.related-element-item>.chips{min-width:0;max-width:100%}
+.nested-field-header{margin:4px 0 0!important;padding:6px var(--s) 2px;font-size:12px;color:var(--gray-700)}
+.element-type-pill{display:inline-block;flex:none;padding:0 5px;border:1px solid var(--gray-200);border-radius:8px;color:var(--gray-700);background:var(--gray-050);font-size:8px;line-height:14px;font-weight:500;text-transform:uppercase;letter-spacing:.2px}
+.related-elements-actions{display:flex;align-items:center;gap:6px;margin-inline:calc(var(--neg-padding) + var(--s) + var(--xs));padding:6px var(--s);border-top:0}.related-elements-empty,.related-elements-error{margin:0;padding:10px var(--m)}.related-elements-error{color:var(--red-600)}
 {% endcss %}
 
 {% js %}
@@ -48,6 +47,13 @@
   document.querySelectorAll('.related-elements-sidebar').forEach((sidebar) => {
     if (sidebar.dataset.initialized) return;
     sidebar.dataset.initialized = 'true';
+    const elementSelect = new Garnish.Select({
+      multi: false,
+      filter: (target) => !$(target).closest('a[href],button,[role=button]').length,
+      makeFocusable: false,
+    });
+    elementSelect.addItems($(sidebar).find('.chip'));
+    sidebar.relatedElementsSelect = elementSelect;
     const requestPage = async (section, cursor) => {
       const error = section.querySelector('.related-elements-error');
       const spinner = section.querySelector('.spinner');
@@ -77,9 +83,16 @@
       const items = section.querySelector('.related-elements-items');
       section.querySelector('.related-elements-more').addEventListener('click', async () => {
         const data = await requestPage(section, section.dataset.cursor); if (!data) return;
-        items.insertAdjacentHTML('beforeend', data.html); updateControls(section, data, true);
+        const previousItems = new Set(items.querySelectorAll('.chip'));
+        items.insertAdjacentHTML('beforeend', data.html);
+        Craft.initUiElements($(items));
+        await Craft.appendHeadHtml(data.headHtml || '');
+        await Craft.appendBodyHtml(data.bodyHtml || '');
+        elementSelect.addItems($(items).find('.chip').filter(function() { return !previousItems.has(this); }));
+        updateControls(section, data, true);
       });
       section.querySelector('.related-elements-less').addEventListener('click', () => {
+        elementSelect.removeItems($(items).find('[data-loaded="true"] .chip'));
         items.querySelectorAll('[data-loaded="true"]').forEach((item) => item.remove());
         const cursor = section.dataset.initialCursor; updateControls(section, {cursor, hasMore: cursor !== ''}, false);
       });
@@ -92,6 +105,15 @@
       if (!expanded) { tooltip.classList.remove('hidden'); button.setAttribute('aria-expanded', 'true'); }
     }));
   });
+  if (!window.relatedElementsSelectionListenerAdded) {
+    window.relatedElementsSelectionListenerAdded = true;
+    Garnish.$win.on('mousedown', (event) => {
+      if ($(event.target).closest('.menu').length) return;
+      document.querySelectorAll('.related-elements-sidebar').forEach((sidebar) => {
+        if (!sidebar.contains(event.target)) sidebar.relatedElementsSelect?.deselectAll();
+      });
+    });
+  }
   if (!window.relatedElementsInfoListenerAdded) {
     window.relatedElementsInfoListenerAdded = true;
     document.addEventListener('click', (event) => {
@@ -100,11 +122,13 @@
       document.querySelectorAll('.related-elements-sidebar .info-icon-btn').forEach((item) => item.setAttribute('aria-expanded', 'false'));
     });
   }
-  if (!window.relatedElementsTagListenerAdded) {
-    window.relatedElementsTagListenerAdded = true;
-    document.addEventListener('click', (event) => {
-      const link = event.target.closest('.related-elements-sidebar .tag-link'); if (!link) return;
-      event.preventDefault(); Craft.createElementEditor('craft\\elements\\Tag', {elementId: Number(link.dataset.tagId)});
+  if (!window.relatedElementsChipListenerAdded) {
+    window.relatedElementsChipListenerAdded = true;
+    Garnish.$doc.on('dblclick taphold', '.related-elements-sidebar .chip', (event) => {
+      if (event.type === 'taphold' && event.target.nodeName === 'BUTTON') return;
+      const chip = event.currentTarget;
+      if (!chip.hasAttribute('data-editable') || chip.classList.contains('disabled') || chip.classList.contains('loading')) return;
+      Craft.createElementEditor(chip.dataset.type, $(chip));
     });
   }
 })();

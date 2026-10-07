@@ -44,7 +44,8 @@ class RelationsController extends Controller
         /** @var Settings $settings */
         $settings = $plugin->getSettings();
         $page = $plugin->relations->page($element, $section, $settings->defaultElementTypes, is_string($cursor) ? $cursor : null, $settings->initialLimit, $settings->enableNestedElements);
-        $html = Craft::$app->getView()->renderTemplate('related-elements/_items', [
+        $view = Craft::$app->getView();
+        $html = $view->renderTemplate('related-elements/_items', [
             'items' => $page['items'],
             'showElementTypeLabel' => $settings->showElementTypeLabel,
             'loaded' => $cursor !== null,
@@ -52,6 +53,8 @@ class RelationsController extends Controller
 
         return $this->asJson([
             'html' => $html,
+            'headHtml' => $view->getHeadHtml(),
+            'bodyHtml' => $view->getBodyHtml(),
             'cursor' => $page['cursor'],
             'hasMore' => $page['hasMore'],
         ]);

@@ -16,7 +16,8 @@
   },
   "require-dev": {
     "craftcms/ecs": "dev-main",
-    "craftcms/phpstan": "dev-main"
+    "craftcms/phpstan": "dev-main",
+    "phpstan/phpstan": "^2.1"
   },
   "autoload": {
     "psr-4": {
