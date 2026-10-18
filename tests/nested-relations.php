@@ -17,11 +17,11 @@ $db->tablePrefix = 'related_elements_test_' . bin2hex(random_bytes(6)) . '_';
 
 try {
     foreach ([
-        'elements' => 'id int PRIMARY KEY, canonicalId int NULL, type varchar(255), dateDeleted timestamp NULL, draftId int NULL, revisionId int NULL',
-        'elements_owners' => 'elementId int, ownerId int',
-        'relations' => 'sourceId int, targetId int, fieldId int, sourceSiteId int NULL',
+        'elements' => ['id' => 'int PRIMARY KEY', 'canonicalId' => 'int NULL', 'type' => 'varchar(255)', 'dateDeleted' => 'timestamp NULL', 'draftId' => 'int NULL', 'revisionId' => 'int NULL'],
+        'elements_owners' => ['elementId' => 'int', 'ownerId' => 'int'],
+        'relations' => ['sourceId' => 'int', 'targetId' => 'int', 'fieldId' => 'int', 'sourceSiteId' => 'int NULL'],
     ] as $table => $columns) {
-        $db->createCommand("CREATE TABLE {{%$table}} ($columns)")->execute();
+        $db->createCommand()->createTable("{{%$table}}", $columns)->execute();
     }
     $db->createCommand()->batchInsert('{{%elements}}', ['id', 'canonicalId', 'type', 'dateDeleted'], [
         [1, null, Entry::class, null],

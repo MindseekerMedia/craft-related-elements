@@ -1,5 +1,11 @@
 # Release Notes for Related Elements
 
+## Unreleased
+
+### Fixed
+
+- Fix incoming relationship queries failing on PostgreSQL due to an unquoted recursive CTE name (#28).
+
 ## 1.3.0 - 2026-10-07
 
 ### Added

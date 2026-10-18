@@ -173,7 +173,7 @@ class Relations
             ->where(['owner.dateDeleted' => null, 'owner.draftId' => null, 'owner.revisionId' => null]), false);
 
         return (new Query())
-            ->withQuery($sources, 'relatedOwners', true)
+            ->withQuery($sources, Craft::$app->getDb()->quoteTableName('relatedOwners'), true)
             ->distinct()
             ->select(['displayId' => 'COALESCE([[displayElements.canonicalId]], [[displayElements.id]])'])
             ->from(['ancestors' => 'relatedOwners'])

@@ -1,5 +1,11 @@
 # Development checks
 
+Run the PostgreSQL/MySQL recursive CTE quoting regression check without a database server:
+
+```bash
+php tests/cte-quoting.php
+```
+
 Run the database regression checks against a local Craft installation:
 
 ```bash
@@ -15,3 +21,5 @@ Run `composer install`, `composer check-cs`, and `composer phpstan` for coding-s
 The compatibility script requires an installed plugin and an administrator account in the test project. It creates real section and Matrix fixtures, checks pagination, sidebar/settings rendering, and scoping, then rolls back its database transaction without writing project-config YAML. On Craft versions before 5.8, it also verifies that the Content Block class and table are absent.
 
 Craft 5.0.0 and 5.7.0 have passed both the database regression suite and compatibility smoke checks using isolated MySQL installations with PHP 8.2. Craft 5.11.4 has also passed the database and real Content Block integration checks. These are tested versions, not a claim that every intermediate patch release has been tested.
+
+Craft 5.11.4 with PHP 8.2 and PostgreSQL 17.11 has passed all three database/integration scripts. Fixture tables use the query builder so mixed-case column names are quoted on PostgreSQL.
