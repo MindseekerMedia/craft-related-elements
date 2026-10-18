@@ -1,6 +1,6 @@
 # Release Notes for Related Elements
 
-## Unreleased
+## 1.3.1 - 2026-10-18
 
 ### Fixed
 
