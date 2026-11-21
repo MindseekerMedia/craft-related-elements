@@ -1,5 +1,11 @@
 # Release Notes for Related Elements
 
+## Unreleased
+
+### Fixed
+
+- Fix the sidebar box overflowing the asset details pane when related element titles are long; titles now truncate with an ellipsis (#29).
+
 ## 1.3.1 - 2026-10-18
 
 ### Fixed
